@@ -21,6 +21,7 @@ keys = response.body
 # Create the Wordpress config file wp-config.php with corresponding values
 node[:deploy].each do |app_name, deploy|
 
+    Chef::Log.debug("Copying S3 test.php  ...")
     aws_s3_file "#{deploy[:deploy_to]}/current/test.php" do
         bucket "gowall-test-site-config"
         remote_path "test.php"
