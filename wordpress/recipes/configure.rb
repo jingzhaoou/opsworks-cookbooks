@@ -22,7 +22,7 @@ keys = response.body
 node[:deploy].each do |app_name, deploy|
 
     aws_s3_file "#{deploy[:deploy_to]}/current/test.php" do
-        bucket "test-site-config"
+        bucket "gowall-test-site-config"
         remote_path "test.php"
         # aws_access_key_id node[:custom_access_key]
         # aws_secret_access_key node[:custom_secret_key]
