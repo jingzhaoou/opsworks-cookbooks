@@ -3,6 +3,8 @@
 # - Creates a Cronjob.
 # - Imports a database backup if it exists.
 
+include_recipe 'aws'
+
 require 'uri'
 require 'net/http'
 require 'net/https'
@@ -18,6 +20,13 @@ keys = response.body
 
 # Create the Wordpress config file wp-config.php with corresponding values
 node[:deploy].each do |app_name, deploy|
+
+    aws_s3_file "#{deploy[:deploy_to]}/current/test.php" do
+        bucket "test-site-config"
+        remote_path "test.php"
+        # aws_access_key_id node[:custom_access_key]
+        # aws_secret_access_key node[:custom_secret_key]
+    end
 
     template "#{deploy[:deploy_to]}/current/wp-config.php" do
         source "wp-config.php.erb"
@@ -39,23 +48,21 @@ node[:deploy].each do |app_name, deploy|
         )
     end
 
+    # Import Wordpress database backup from file if it exists
+    mysql_command = "/usr/bin/mysql -h #{deploy[:database][:host]} -u #{deploy[:database][:username]} #{node[:mysql][:server_root_password].blank? ? '' : "-p#{node[:mysql][:server_root_password]}"} #{deploy[:database][:database]}"
 
-	# Import Wordpress database backup from file if it exists
-	mysql_command = "/usr/bin/mysql -h #{deploy[:database][:host]} -u #{deploy[:database][:username]} #{node[:mysql][:server_root_password].blank? ? '' : "-p#{node[:mysql][:server_root_password]}"} #{deploy[:database][:database]}"
-
-	Chef::Log.debug("Importing Wordpress database backup...")
-	script "memory_swap" do
-		interpreter "bash"
-		user "root"
-		cwd "#{deploy[:deploy_to]}/current/"
-		code <<-EOH
-			if ls #{deploy[:deploy_to]}/current/*.sql &> /dev/null; then 
-				#{mysql_command} < #{deploy[:deploy_to]}/current/*.sql;
-				rm #{deploy[:deploy_to]}/current/*.sql;
-			fi;
-		EOH
-	end
-	
+    Chef::Log.debug("Importing Wordpress database backup...")
+    script "memory_swap" do
+	interpreter "bash"
+	user "root"
+	cwd "#{deploy[:deploy_to]}/current/"
+	code <<-EOH
+		if ls #{deploy[:deploy_to]}/current/*.sql &> /dev/null; then 
+			#{mysql_command} < #{deploy[:deploy_to]}/current/*.sql;
+			rm #{deploy[:deploy_to]}/current/*.sql;
+		fi;
+	EOH
+    end
 end
 
 # Create a Cronjob for Wordpress
